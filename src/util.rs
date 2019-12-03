@@ -2,7 +2,6 @@ extern crate clap;
 
 use clap::{App, Arg};
 use std::cmp;
-// use std::str::FromStr;
 
 pub fn error_exit(msg: &str) -> ! {
     eprintln!("{}", msg);
@@ -20,6 +19,16 @@ macro_rules! or_abort {
             Ok(value) => value,
             Err(_) => error_exit($msg),
         }
+    };
+}
+
+#[macro_export]
+macro_rules! lines_from_stdin {
+    () => {
+        std::io::stdin()
+        .lock()
+        .lines()
+        .map(or_abort!("Failed to read"))
     };
 }
 
@@ -43,6 +52,3 @@ pub fn part_id_from_cli() -> PartID {
     }
 }
 
-// pub fn clip_max<T: Ord>(value: T, max_v: T) -> T {
-//     cmp::min(max_v, value)
-// }
