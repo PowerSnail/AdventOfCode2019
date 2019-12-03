@@ -1,0 +1,18 @@
+[package]
+name = "advent_of_code_2019"
+version = "0.1.0"
+authors = ["PowerSnail <hj5fb@virginia.edu>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+clap = "*"
+
+[[bin]]
+name = "day1"
+path = "src/day1.rs"
+
+[[bin]]
+name = "day2"
+path = "src/day2.rs"
