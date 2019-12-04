@@ -8,6 +8,58 @@ struct Point {
     y: i32,
 }
 
+macro_rules! range_map {
+    ($v1:expr => $v2:expr, $f:expr) => {
+        if $v1 > $v2 {
+            ($v2..$v1).rev().for_each($f)
+        } else {
+            (($v1 + 1)..=$v2).for_each($f)
+        }
+    };
+}
+
+macro_rules! line_map {
+    ($p1:expr => $p2:expr, $f:expr) => {
+        if $p1.x == $p2.x {
+            range_map!($p1.y => $p2.y, |y| $f(Point {x: $p1.x, y: y}))
+        } else if $p1.y == $p2.y {
+            range_map!($p1.x => $p2.x, |x| $f(Point {x: x, y: $p1.y}))
+        } else {
+            panic!("No oblique lines");
+        }
+    };
+}
+
+macro_rules! map {
+    (New $rect:expr, Fill $fill:expr) => {{
+        let left = $rect.0;
+        let bottom = $rect.1;
+        let width = $rect.2 as usize;
+        let height = $rect.3 as usize;
+        let mut buffer = Vec::new();
+        buffer.resize(width * height, $fill);
+        (buffer, (left, bottom, width, height))
+    }};
+    ($map:expr, $x:expr, $y:expr) => {{
+        let (left, bottom, width, _) = $map.1;
+        let x = ($x - left) as usize;
+        let y = ($y - bottom) as usize;
+        $map.0[x + y * width]
+    }};
+    ($map:expr, $x:expr, $y:expr, Set $v:expr) => {{
+        let (left, bottom, width, _) = $map.1;
+        let x = ($x - left) as usize;
+        let y = ($y - bottom) as usize;
+        $map.0[x + y * width] = $v;
+    }};
+    ($map:expr, $p:expr) => {{
+        map!($map, $p.x, $p.y)
+    }};
+    ($map:expr, $p:expr, Set $v:expr) => {{
+        map!($map, $p.x, $p.y, Set $v);
+    }};
+}
+
 fn parse_point(string: &str) -> Result<Point, ()> {
     match string.get(1..).unwrap().parse() {
         Ok(val) => match string.chars().next() {
@@ -21,75 +73,16 @@ fn parse_point(string: &str) -> Result<Point, ()> {
     }
 }
 
-fn in_range(v: i32, (lo, hi): (i32, i32)) -> bool {
-    lo <= v && v <= hi
-}
-
-fn wire_range(beg: i32, delta: i32) -> (i32, i32) {
-    let lo = std::cmp::min(beg, beg + delta);
-    let hi = std::cmp::max(beg, beg + delta);
-    (lo + 1, hi)
-}
-
-fn range_intersection((beg1, end1): (i32, i32), (beg2, end2): (i32, i32)) -> (i32, i32) {
-    (std::cmp::max(beg1, beg2), std::cmp::min(end1, end2))
-}
-
-fn min_abs((beg, end): (i32, i32)) -> Option<i32> {
-    if end < beg {
-        None
-    } else if beg * end <= 0 {
-        Some(0)
-    } else {
-        Some(std::cmp::min(beg.abs(), end.abs()))
-    }
-}
-
-fn interset_perpendicular(
-    vert_o: &Point,
-    vert_v: &Point,
-    hori_o: &Point,
-    hori_v: &Point,
-) -> Option<i32> {
-    if in_range(vert_o.x, wire_range(hori_o.x, hori_v.x))
-        && in_range(hori_o.y, wire_range(vert_o.y, vert_v.y))
-    {
-        println!("Found inter {}, {}", vert_o.x, hori_o.y);
-        Some(man_norm(vert_o.x, hori_o.y))
-    } else {
-        None
-    }
-}
-
-fn intersect_norm(o1: &Point, v1: &Point, o2: &Point, v2: &Point) -> Option<i32> {
-    match (v1, v2) {
-        (Point { x: 0, y: _ }, Point { x: _, y: 0 }) => interset_perpendicular(&o1, &v1, &o2, &v2),
-        (Point { x: _, y: 0 }, Point { x: 0, y: _ }) => interset_perpendicular(&o2, &v2, &o1, &v1),
-        (Point { x: 0, y: _ }, Point { x: 0, y: _ }) if o1.x == o2.x => {
-            match min_abs(range_intersection(
-                wire_range(o1.y, v1.y),
-                wire_range(o2.y, v2.y),
-            )) {
-                Some(y) => {
-                    Some(man_norm(o1.x, y))
-                }
-                _ => None,
-            }
-        }
-        (Point { x: _, y: 0 }, Point { x: _, y: 0 }) if o1.y == o2.y => {
-            match min_abs(range_intersection(
-                wire_range(o1.x, v1.x),
-                wire_range(o2.x, v2.x),
-            )) {
-                Some(x) => {
-                    println!("Found intersectin {},{}", x, o1.y);
-                    Some(man_norm(x, o1.y))
-                }
-                _ => None,
-            }
-        }
-        _ => None,
-    }
+fn expand_bound_rect(
+    (left, bottom, width, height): (i32, i32, i32, i32),
+    p: &Point,
+) -> (i32, i32, i32, i32) {
+    return (
+        left.min(p.x),
+        bottom.min(p.y),
+        width.max(p.x - left + 1),
+        height.max(p.y - bottom + 1),
+    );
 }
 
 fn man_norm(x: i32, y: i32) -> i32 {
@@ -97,33 +90,69 @@ fn man_norm(x: i32, y: i32) -> i32 {
 }
 
 fn main() {
-    let inputs: Vec<Vec<Point>> = lines_from_stdin!()
+    let wires: Vec<Vec<Point>> = lines_from_stdin!()
+        .take(2)
         .map(|line| {
+            let mut vector = vec![Point { x: 0, y: 0 }];
             line.split(',')
                 .map(parse_point)
                 .map(or_abort!("Failed to parse"))
-                .collect()
+                .for_each(|delta| {
+                    let prev = vector.last().unwrap();
+                    let next = Point {x: prev.x + delta.x,
+                        y: prev.y + delta.y};
+                    vector.push(next);
+                });
+            vector
         })
         .collect();
 
-    let w1 = &inputs[0];
-    let w2 = &inputs[1];
+    let rect = wires
+        .iter()
+        .flat_map(|w| w.iter())
+        .fold((0, 0, 0, 0), expand_bound_rect);
 
-    let mut min_dist: i32 = 999999;
-    let mut o1 = Point { x: 0, y: 0 };
-    for v1 in w1 {
-        let mut o2 = Point { x: 0, y: 0 };
-        for v2 in w2 {
-            match intersect_norm(&o1, v1, &o2, v2) {
-                Some(dist) => min_dist = min_dist.min(dist),
-                None => (),
+    match util::part_id_from_cli() {
+        util::PartID::One => {
+            let mut map = map!(New rect, Fill 0);
+            let mut min_dist = std::i32::MAX;
+            for wire in wires {
+                min_dist = std::i32::MAX;
+                for (next, curr) in wire.iter().skip(1).zip(wire.iter()) {
+                    line_map!(curr => next, |p: Point| {
+                        if map!(map, p) != 0 {
+                            min_dist = min_dist.min(man_norm(p.x, p.y));
+                        } else {
+                            map!(map, p, Set 1);
+                        }
+                    });
+                }
             }
-            o2.x += v2.x;
-            o2.y += v2.y;
+            println!("{}", min_dist);
         }
-        o1.x += v1.x;
-        o1.y += v1.y;
-    }
+        util::PartID::Two => {
+            let mut map = map!(New rect, Fill -1);
+            let mut step_counter = 0;
+            for (next, curr) in wires[0].iter().skip(1).zip(wires[0].iter()) {
+                line_map!(curr => next, |p: Point| {
+                    step_counter += 1;
+                    if map!(map, p) == -1 {
+                        map!(map, p, Set step_counter);
+                    }
+                });
+            }
+            step_counter = 0;
+            let mut min_dist = std::i32::MAX;
+            for (next, curr) in wires[1].iter().skip(1).zip(wires[1].iter()) {
+                line_map!(curr => next, |p: Point| {
+                    step_counter += 1;
+                    if map!(map, p) > 0 {
+                        min_dist = min_dist.min(map!(map, p) + step_counter);
+                    }
+                });
+            }
 
-    println!("{}", min_dist);
+            println!("{}", min_dist);
+        }
+    }
 }
