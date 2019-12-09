@@ -1,78 +1,43 @@
 mod util;
 
-use std::collections::HashMap;
 use std::io::BufRead;
 use util::{error_exit, part_id_from_cli, PartID};
 
-const TENS: [u32; 8] = [0, 1, 10, 100, 1000, 10000, 100000, 100000];
-type Cache = HashMap<(u32, u32, bool), usize>;
+fn is_valid(num: i32, require_absolute_2: bool) -> bool {
+    let digits: Vec<i32> = vec![
+        num / 100000,
+        num / 10000 % 10,
+        num / 1000 % 10,
+        num / 100 % 10,
+        num / 10 % 10,
+        num % 10,
+    ];
+    let sorted = digits[1..]
+        .iter()
+        .zip(digits.iter())
+        .map(|(curr, prev)| prev <= curr)
+        .fold(true, |a, b| a && b);
 
-macro_rules! digit {
-    ($n:expr, $i:expr) => {
-        $n / TENS[$i] % 10
-    };
-}
-
-fn count(lo: u32, hi: u32, n_digit: usize, require_dup: bool, cache: &mut Cache) -> usize {
-    if hi < lo {
-        println!("count {} => {} = {}", lo, hi, 0);
-
-        return 0;
+    if !sorted {
+        return false;
     }
-    if n_digit == 1 {
-        let result = match require_dup {
-            true => 0,
-            false => (hi + 1 - lo) as usize,
-        };
-        println!("count {} => {} = {}", lo, hi, result);
-        return result;
+    let mut accumulator = vec![1];
+    digits[1..]
+        .iter()
+        .zip(digits.iter())
+        .for_each(|(curr, prev)| match curr == prev {
+            true => {
+                let last = accumulator.len() - 1;
+                accumulator[last] += 1;
+            }
+            false => accumulator.push(1),
+        });
+
+    if require_absolute_2 {
+        return accumulator.into_iter().any(|c| c == 2);
+    } else {
+        return accumulator.into_iter().any(|c| c >= 2);
     }
-    if cache.contains_key(&(lo, hi, require_dup)) {
-        let result = cache[&(lo, hi, require_dup)];
-        println!("count {} => {} = {}", lo, hi, result);
-        return result;
-    }
-
-    let lo_digit = digit!(lo, n_digit);
-    let hi_digit = digit!(hi, n_digit);
-
-    let result = (lo_digit..=hi_digit)
-        .map(|cur_d| {
-            let lo = match cur_d == lo_digit {
-                true => lo % TENS[n_digit],
-                false => 0,
-            };
-            let hi = match cur_d == hi_digit {
-                true => hi % TENS[n_digit],
-                false => TENS[n_digit] - 1,
-            };
-
-            // next_d != cur_d
-            let count1 = count(
-                lo.max((cur_d + 1) * TENS[n_digit - 1]),
-                hi.min(TENS[n_digit] - 1),
-                n_digit - 1,
-                require_dup,
-                cache,
-            );
-
-            // next_d == cur_d
-            let count2 = count(
-                lo.max(cur_d * TENS[n_digit - 1]),
-                hi.min((cur_d + 1) * TENS[n_digit - 1] - 1),
-                n_digit - 1,
-                false,
-                cache,
-            );
-
-            count1 + count2
-        })
-        .sum();
-
-    cache.insert((lo, hi, require_dup), result);
-    println!("count {} => {} = {}", lo, hi, result);
-
-    result
 }
 
 fn main() {
@@ -80,14 +45,18 @@ fn main() {
         .take(2)
         .map(|line| line.parse())
         .map(or_abort!("Failed to parse"))
-        .collect::<Vec<u32>>()[..]
+        .collect::<Vec<i32>>()[..]
     {
         [lo, hi] => (lo, hi),
         _ => unreachable!(),
     };
 
-    let mut cache: Cache = HashMap::new();
-    let result = count(lo, hi, 6, true, &mut cache);
+    let absolute_2 = match part_id_from_cli() {
+        PartID::One => false,
+        PartID::Two => true,
+    };
+
+    let result = (lo..=hi).filter(|&x| is_valid(x, absolute_2)).count();
 
     println!("{}", result);
 }
