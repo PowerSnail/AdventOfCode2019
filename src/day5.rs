@@ -24,7 +24,7 @@ macro_rules! def_param {
         };
     };
     (OutAddr $var:ident = $mem: expr, $pc: expr, $i:expr) => {
-        let $var: usize =$mem[$pc + $i] as usize;
+        let $var: usize = $mem[$pc + $i] as usize;
     };
 }
 
@@ -32,9 +32,9 @@ fn process<T>(memory: &mut [i32], cursor: usize, mut input: T)
 where
     T: Iterator<Item = i32>,
 {
-    eprint!("[{:03}] Op = {:05} | ", cursor,  memory[cursor]);
+    eprint!("[{:03}] Op = {:05} | ", cursor, memory[cursor]);
 
-    let cursor: usize = match  memory[cursor as usize] % 100 {
+    let cursor: usize = match memory[cursor as usize] % 100 {
         ADD => {
             def_param!(Value v1 = memory, cursor, 1);
             def_param!(Value v2 = memory, cursor, 2);
@@ -69,40 +69,40 @@ where
             eprintln!("JMP_IF cond={}, to={}", v, addr as usize);
             match v {
                 0 => cursor + 3,
-                _ => addr as usize
+                _ => addr as usize,
             }
-        },
+        }
         JMP_IF_NOT => {
             def_param!(Value v = memory, cursor, 1);
             def_param!(Value addr = memory, cursor, 2);
             eprintln!("JMP_IF_NOT cond={}, to={}", v, addr as usize);
             match v {
                 0 => addr as usize,
-                _ => cursor + 3
+                _ => cursor + 3,
             }
-        },
+        }
         CMP_LT => {
             def_param!(Value v1 = memory, cursor, 1);
             def_param!(Value v2 = memory, cursor, 2);
             def_param!(OutAddr p_out = memory, cursor, 3);
             memory[p_out] = match v1 < v2 {
                 true => 1,
-                false => 0
+                false => 0,
             };
             eprintln!("CMP_LT {} {} mem[{}]={}", v1, v2, p_out, memory[p_out]);
             cursor + 4
-        },
+        }
         CMP_EQ => {
             def_param!(Value v1 = memory, cursor, 1);
             def_param!(Value v2 = memory, cursor, 2);
             def_param!(OutAddr p_out = memory, cursor, 3);
             memory[p_out] = match v1 == v2 {
                 true => 1,
-                false => 0
+                false => 0,
             };
             eprintln!("CMP_EQ {} {} mem[{}]={}", v1, v2, p_out, memory[p_out]);
             cursor + 4
-        },
+        }
         HALT => return,
         _ => error_exit(&format!("Invalid command {} at {}", memory[cursor], cursor)),
     };
@@ -110,7 +110,9 @@ where
 }
 
 fn main() {
-    let mut program: Vec<i32> = lines_from_stdin!().nth(0).unwrap()
+    let mut program: Vec<i32> = lines_from_stdin!()
+        .nth(0)
+        .unwrap()
         .split(',')
         .map(|code| match code.parse() {
             Ok(v) => v,
@@ -122,7 +124,7 @@ fn main() {
 
     let user_inputs = match util::part_id_from_cli() {
         util::PartID::One => [1],
-        util::PartID::Two => [5]
+        util::PartID::Two => [5],
     };
 
     process(&mut program, 0, user_inputs.into_iter().map(|&x| x));

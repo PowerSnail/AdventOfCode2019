@@ -99,8 +99,10 @@ fn main() {
                 .map(or_abort!("Failed to parse"))
                 .for_each(|delta| {
                     let prev = vector.last().unwrap();
-                    let next = Point {x: prev.x + delta.x,
-                        y: prev.y + delta.y};
+                    let next = Point {
+                        x: prev.x + delta.x,
+                        y: prev.y + delta.y,
+                    };
                     vector.push(next);
                 });
             vector
