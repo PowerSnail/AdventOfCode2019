@@ -52,3 +52,56 @@ pub fn part_id_from_cli() -> PartID {
         _ => panic!("Error in part"),
     }
 }
+
+#[macro_export]
+macro_rules! yield_iter {
+    [$($x:expr,)*] => {
+        vec![$($x,)*].into_iter()
+    };
+}
+
+pub struct Permutation<T> {
+    array: Vec<T>,
+    indexes: Vec<usize>,
+    init: bool,
+}
+
+impl<T: Clone> Iterator for Permutation<T> {
+    type Item = Vec<T>;
+
+    fn next(&mut self) -> Option<Vec<T>> {
+        if self.init {
+            self.init = false;
+            return Some(self.array.clone());
+        }
+        let k = (0..self.array.len() - 1)
+            .rev()
+            .filter(|&k| self.indexes[k] < self.indexes[k + 1])
+            .nth(0)?;
+        let i = ((k + 1)..self.array.len())
+            .rev()
+            .filter(|&i| self.indexes[i] > self.indexes[k])
+            .nth(0)?;
+
+        self.indexes.swap(i, k);
+        self.indexes[(k + 1)..].reverse();
+
+        self.array.swap(i, k);
+        self.array[(k + 1)..].reverse();
+
+        Some(self.array.clone())
+    }
+}
+
+pub fn permute<T, I>(number: I) -> Permutation<T>
+where
+    I: IntoIterator<Item = T>,
+{
+    let array: Vec<T> = number.into_iter().collect();
+    let indexes: Vec<usize> = (0..array.len()).collect();
+    Permutation {
+        array,
+        indexes,
+        init: true,
+    }
+}
