@@ -4,33 +4,33 @@ use std::collections::VecDeque;
 use std::io::BufRead;
 use util::{error_exit, part_id_from_cli, PartID};
 
-type value_type = i64;
+type ValueType = i64;
 
 
-const TENS: [value_type; 3] = [100, 1000, 10000];
+const TENS: [ValueType; 3] = [100, 1000, 10000];
 
-const ADD: value_type = 1;
-const MULTIPLY: value_type = 2;
-const INPUT: value_type = 3;
-const OUTPUT: value_type = 4;
-const JMP_IF_NON_ZERO: value_type = 5;
-const JMP_IF_ZERO: value_type = 6;
-const CMP_LT: value_type = 7;
-const CMP_EQ: value_type = 8;
-const MOVE_RBASE: value_type = 9;
-const HALT: value_type = 99;
+const ADD: ValueType = 1;
+const MULTIPLY: ValueType = 2;
+const INPUT: ValueType = 3;
+const OUTPUT: ValueType = 4;
+const JMP_IF_NON_ZERO: ValueType = 5;
+const JMP_IF_ZERO: ValueType = 6;
+const CMP_LT: ValueType = 7;
+const CMP_EQ: ValueType = 8;
+const MOVE_RBASE: ValueType = 9;
+const HALT: ValueType = 99;
 
-const MODE_POSITION: value_type = 0;
-const MODE_IMMEDIATE: value_type = 1;
-const MODE_RELATIVE: value_type = 2;
+const MODE_POSITION: ValueType = 0;
+const MODE_IMMEDIATE: ValueType = 1;
+const MODE_RELATIVE: ValueType = 2;
 
 #[derive(Debug)]
 struct Machine {
-    memory: Vec<value_type>,
+    memory: Vec<ValueType>,
     cursor: usize,
-    relative_base: value_type,
-    in_queue: VecDeque<value_type>,
-    out_queue: VecDeque<value_type>,
+    relative_base: ValueType,
+    in_queue: VecDeque<ValueType>,
+    out_queue: VecDeque<ValueType>,
     debug_mode: bool,
 }
 
@@ -42,7 +42,7 @@ enum State {
 }
 
 impl Machine {
-    fn new(init_mem: &Vec<value_type>) -> Machine {
+    fn new(init_mem: &Vec<ValueType>) -> Machine {
         Machine {
             memory: init_mem.clone(),
             cursor: 0,
@@ -53,7 +53,7 @@ impl Machine {
         }
     }
 
-    fn param_val(&mut self, index: usize) -> value_type {
+    fn param_val(&mut self, index: usize) -> ValueType {
         let immediate_val = self.memory[self.cursor + index + 1];
         self.debug(&format!(
             "PARAM : immediate val = {}, mode = {}",
@@ -85,7 +85,7 @@ impl Machine {
         })
     }
 
-    fn as_addr(&mut self, val: value_type) -> usize {
+    fn as_addr(&mut self, val: ValueType) -> usize {
         let val = val as usize;
         if val >= self.memory.len() {
             self.memory.resize(val + 1, 0);
@@ -94,7 +94,7 @@ impl Machine {
         val
     }
 
-    fn load(&mut self, addr: value_type) -> value_type {
+    fn load(&mut self, addr: ValueType) -> ValueType {
         let addr = self.as_addr(addr);
         self.memory[addr]
     }
@@ -234,7 +234,7 @@ fn step(m: &mut Machine) -> State {
 }
 
 fn run_all<T>(m: &mut Machine, input: T) -> State 
-    where T: Iterator<Item=value_type>
+    where T: Iterator<Item=ValueType>
 {
     for v in input {
         m.in_queue.push_back(v);
@@ -249,7 +249,7 @@ fn run_all<T>(m: &mut Machine, input: T) -> State
 }
 
 fn main() {
-    let program: Vec<value_type> = lines_from_stdin!()
+    let program: Vec<ValueType> = lines_from_stdin!()
         .nth(0)
         .unwrap()
         .split(',')

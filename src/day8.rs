@@ -1,6 +1,5 @@
 mod util;
 
-use std::io::stdout;
 use std::io::{BufRead, Read};
 use util::{error_exit, part_id_from_cli, PartID};
 
