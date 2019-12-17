@@ -2,3 +2,4 @@
 **/*.rs.bk
 inputs
 tmp/
+.vscode/

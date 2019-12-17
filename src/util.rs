@@ -105,3 +105,11 @@ where
         init: true,
     }
 }
+
+pub fn collect_sorted_vec<T: std::cmp::Ord, I>(items: I) -> Vec<T> 
+    where I: IntoIterator<Item = T>
+{
+    let mut vector : Vec<T> = items.into_iter().collect();
+    vector.sort();
+    vector
+}
