@@ -30,6 +30,7 @@ pub struct Machine {
 }
 
 #[derive(Debug)]
+#[derive(PartialEq)]
 pub enum State {
     Halted,
     Running,
@@ -48,8 +49,16 @@ impl Machine {
         }
     }
 
+    pub fn has_output(&self) -> bool {
+        !self.out_queue.is_empty()
+    }
+
     pub fn pop_output(&mut self) -> ValueType {
         self.out_queue.pop_front().unwrap()
+    }
+
+    pub fn memset(&mut self, addr: usize, value: ValueType) {
+        self.memory[addr] = value;
     }
 
     fn param_val(&mut self, index: usize) -> ValueType {
