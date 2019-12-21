@@ -2,13 +2,10 @@ extern crate clap;
 mod intcode_machine;
 mod util;
 
-use clap::{App, Arg};
 use intcode_machine::{run_all, Machine, State};
 use std::collections::HashMap;
-use std::fs::File;
-use std::io::BufReader;
-use std::io::{stdin, BufRead, Read};
-use util::{PartID};
+use std::io::{stdin, BufRead};
+use util::{PartID, part_id_from_cli};
 
 struct Frame {
     map: HashMap<(i64, i64), i64>,
@@ -77,12 +74,8 @@ fn render(frame: &Frame) {
     println!("Score = {}", frame.score);
 }
 
-fn load_machine(filename: &str) -> Machine {
-    println!("{}", &filename);
-    let f = File::open(&filename).expect("File don't exist");
-    let reader = BufReader::new(f);
-
-    let program = reader
+fn load_machine() -> Machine {
+    let program = stdin().lock()
         .split(',' as u8)
         .map(|chunk| String::from_utf8(chunk.ok()?).ok()?.parse().ok())
         .map(|result| result.expect("Failed to get next input"))
@@ -96,29 +89,12 @@ fn autoplay(frame: &Frame) -> i64 {
 }
 
 fn main() {
-    let args = App::new("Day13")
-        .arg(
-            Arg::with_name("part")
-                .possible_value("part1")
-                .possible_value("part2"),
-        )
-        .arg(Arg::with_name("file"))
-        .get_matches();
-    
-    let part = match args.value_of("part") {
-        Some("part1") => PartID::One,
-        Some("part2") => PartID::Two,
-        _ => unreachable!(),
-    };
-    let filename = args.value_of("file").unwrap();
-
-    let mut machine = load_machine(&filename);
+    let mut machine = load_machine();
     let mut frame = Frame::new();
-    match part {
+    match part_id_from_cli() {
         PartID::One => {
             run_all(&mut machine, yield_iter![]);
             apply_change(&mut machine, &mut frame);
-            render(&frame);
             let result = frame.map.iter().filter(|&(_, v)| *v == 2).count();
             println!("{}", result);
         }
@@ -126,13 +102,12 @@ fn main() {
             machine.memset(0, 2);
             let mut state = run_all(&mut machine, yield_iter![]);
             apply_change(&mut machine, &mut frame);
-            render(&frame);
             while state != State::Halted {
                 let joy_stick = autoplay(&frame);
                 state = run_all(&mut machine, yield_iter![joy_stick, ]);
                 apply_change(&mut machine, &mut frame);
-                render(&frame);
             }
+            println!("{}", frame.score);
         }
     }
 }
